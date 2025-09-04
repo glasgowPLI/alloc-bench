@@ -9,6 +9,20 @@
 #  include "bump_alloc.h"
 #endif
 
+#if defined(BDWGC)
+#define GC_THREADS
+#  include "gc.h"
+#  include "gc/gc_mark.h"
+#define malloc(x) GC_MALLOC(x) 
+#define calloc(c, sz ) GC_MALLOC((c) * (sz))
+#if  defined(IGNOREFREE)
+#      define free(p) 
+#else 
+#      define free(p)  GC_FREE(p)
+#endif 
+#endif 
+
+
 int
 benchmark_initialize() {
 	return 0;
@@ -55,7 +69,11 @@ benchmark_malloc(size_t alignment, size_t size) {
 		return ptr;
 	}
 	else {
+                #if defined(BDWGC)
+		return malloc(size);
+		#else 
 		return calloc(1,size);
+                #endif 
 	}
 }
 

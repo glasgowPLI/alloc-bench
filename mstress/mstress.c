@@ -13,7 +13,9 @@ terms of the MIT license.
 #include <alloc-bench-main.h>
 #else
 # if defined(BDWGC)
+#define GC_THREADS
 #  include "gc.h"
+#  include "gc/gc_mark.h"
 #   define CUSTOM_MALLOC(n)     GC_MALLOC(n)
 #   ifdef IGNOREFREE
 #    define CUSTOM_FREE(p)       

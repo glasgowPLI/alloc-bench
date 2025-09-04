@@ -29,7 +29,10 @@
 #define CACHE_ALIGNED 1
 
 #ifdef BDWGC 
+#define GC_THREADS
 # include "gc.h"
+# include "gc/gc_mark.h"
+
 #  define xmalloc(p) GC_MALLOC((p))
 #  ifdef IGNOREFREE
 #    define xfree(p) 

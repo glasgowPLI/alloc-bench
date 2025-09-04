@@ -31,7 +31,9 @@
    multi-threaded using thread-arena, and main arena with SINGLE_THREAD_P
    false.  */
 #if defined(BDWGC)
+#define GC_THREADS
 #include "gc.h"
+#include "gc/gc_mark.h"
 #define MALLOC(obj)  GC_MALLOC((obj))
 # ifdef IGNOREFREE
 #   define FREE(obj)  {};

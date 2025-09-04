@@ -32,10 +32,13 @@
 // #include "json-lib.h"
 
 #if defined(BDWGC)
+#define GC_THREADS
 #include "gc.h"
+#include "gc/gc_mark.h"
 #define MALLOC(obj)  GC_MALLOC((obj))
 # ifdef IGNOREFREE
-#   define FREE(obj)  { printf("[%s:%u] | tid -> %x | gc-ing obj = %#p\n", __FUNCTION__, __LINE__, pthread_self(), obj); fflush(NULL); };
+#   define FREE(obj)  
+//{ printf("[%s:%u] | tid -> %x | gc-ing obj = %#p\n", __FUNCTION__, __LINE__, pthread_self(), obj); fflush(NULL); };
 # else /* ifdef IGNOREFREE */
 #   define FREE(obj)  GC_FREE((obj))
 # endif /* ifdef IGNOREFREE */
@@ -175,12 +178,6 @@ malloc_benchmark_loop (void **ptr_arr)
       for(int i = 0; i < next_block; i++) {
         ((char*)p)[i] = (char)i;
       }
-      printf("[%s:%d] | tid -> %x | p = %#p (size=%u) | ", __FUNCTION__, __LINE__, pthread_self(),  p, next_block);
-      for(int i = 0; i < next_block; i++) {
-        printf("%02x.", (char )(((char*)p)[i]));
-      }
-      printf("\n");
-      fflush(NULL);
       iters++;
     }
 
@@ -267,7 +264,6 @@ unsigned int GC_count = 0;
 static void signal_gc()
 {
   GC_count++;
-  printf("==================\nStarting GC: %u\n\n\n\n\n=============\n",  GC_count);
 } 
 #endif
 
@@ -290,7 +286,9 @@ int bench_main (int argc, char **argv)
   } else { 
     printf("[%s:%u] | GC-notify callback already set\n", __FUNCTION__, __LINE__);
   }
+  #if 0 
   GC_allow_register_threads();
+  #endif 
 #endif
   
   if (argc == 1)

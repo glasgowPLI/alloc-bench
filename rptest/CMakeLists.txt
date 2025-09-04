@@ -21,7 +21,7 @@ endif()
 
 
 if (${gclib} STREQUAL bdwgc)
-    message(FATAL_ERROR "rptest not yet changed for GC")
+    #message(FATAL_ERROR "rptest not yet changed for GC")
     add_compile_definitions(BDWGC IGNOREFREE)
     include_directories(AFTER ${install_dir}/include)
     list(APPEND target_shared_libs gc)

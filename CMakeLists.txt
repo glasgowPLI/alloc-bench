@@ -20,7 +20,8 @@ if (${gclib} STREQUAL bdwgc)
         -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/bdwgc
         -Denable_gcj_support=OFF 
         -Denable_parallel_mark=OFF 
-	-Denable_threads=OFF
+	-Denable_threads=ON
+	-Denable_dynamic_loading=ON
         -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE})
     set(bdwgc_build_prefix ${CMAKE_CURRENT_BINARY_DIR}/bdwgc)
 
@@ -47,8 +48,8 @@ if (${gclib} STREQUAL bdwgc)
     # Will work with Unix Make
     include(ExternalProject)
     ExternalProject_Add(project_bdwgc
-            GIT_REPOSITORY https://github.com/djichthys/bdwgc.git
-            GIT_TAG cheri/may2025-bmabi
+            GIT_REPOSITORY https://github.com/IsaacG18/bdwgc.git
+            GIT_TAG dj/incremental
             CMAKE_ARGS ${bdwgc_cmake_args}
             PREFIX ${bdwgc_build_prefix})
 
@@ -135,13 +136,11 @@ add_subdirectory(cfrac)
 add_subdirectory(espresso) 
 add_subdirectory(richards) 
 add_subdirectory(simple_alloc) 
-#add_subdirectory(glibc-bench) 
 add_subdirectory(binary-tree-profiling) ## TODO this
-if ( NOT ${gclib} STREQUAL bdwgc)
-    add_subdirectory(mstress) 
-    add_subdirectory(rptest) 
-    add_subdirectory(xmalloc) 
-endif()
+add_subdirectory(glibc-bench) 
+add_subdirectory(mstress) 
+add_subdirectory(xmalloc) 
+add_subdirectory(rptest) 
 
 # Check out this
 # [link](https://www.jwlawson.co.uk/interest/2020/02/23/cmake-external-project.html) 

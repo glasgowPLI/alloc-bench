@@ -19,6 +19,9 @@ thread_entry(void* argptr) {
 }
 
 #else
+#define GC_THREADS
+#  include "gc.h"
+
 #  include <time.h>
 #  include <pthread.h>
 #  include <sched.h>

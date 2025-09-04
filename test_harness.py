@@ -29,11 +29,11 @@ run_bench = [
 
 
 additional_benchmarks = [ 
- #'glibc_bench_simple.elf', 
- #'glibc_bench_thread.elf',
- #f'mstress.elf {num_proc} 50 25', 
- #f'rptest.elf {num_proc} 0 1 2 500 1000 100 8 16000',
- #f'xmalloc.elf -w {num_proc} -t 5 -s 64'
+ 'glibc_bench_simple.elf', 
+ 'glibc_bench_thread.elf',
+ f'mstress.elf {num_proc} 50 25', 
+ f'rptest.elf {num_proc} 0 1 2 500 1000 100 8 16000',
+ f'xmalloc.elf -w {num_proc} -t 5 -s 64'
 ] 
 
 pmc_events = [
