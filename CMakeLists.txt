@@ -48,7 +48,7 @@ if (${gclib} STREQUAL bdwgc)
     # Will work with Unix Make
     include(ExternalProject)
     ExternalProject_Add(project_bdwgc
-            GIT_REPOSITORY https://github.com/IsaacG18/bdwgc.git
+            GIT_REPOSITORY https://github.com/djichthys/bdwgc.git
             GIT_TAG dj/incremental
             CMAKE_ARGS ${bdwgc_cmake_args}
             PREFIX ${bdwgc_build_prefix})
