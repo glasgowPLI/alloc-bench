@@ -618,8 +618,26 @@ benchmark_worker(void* argptr) {
 	thread_exit(0);
 }
 
+#if defined(BDWGC)      
+unsigned int GC_count = 0;
+static void signal_gc() 
+{               
+  GC_count++;
+}
+#endif  
+
 int
 benchmark_run(int argc, char** argv) {
+        #if defined(BDWGC)
+	GC_INIT();
+	if (!GC_get_start_callback()) {
+		GC_set_start_callback(signal_gc); 
+		GC_start_performance_measurement(); 
+	} else { 
+		printf("[%s:%u] | GC-notify callback already set\n", __FUNCTION__, __LINE__);
+        }
+        #endif 
+
 	if (timer_initialize() < 0)
 		return -1;
 	if (benchmark_initialize() < 0)
@@ -886,13 +904,19 @@ benchmark_run(int argc, char** argv) {
 		return -4;
 
 #if defined(BM_LOGFILE)
-  BM_Harness data = { .bm = "rptest",
-                      .gc_cycles = 0,
-                      .gc_time_ms = 0};
-  bmlog(&data);
+# if defined(BDWGC)
+	printf("[%s:%d] | number of gc- cycles complete = %u, total-gc-time = %u\n",
+			__FUNCTION__ , __LINE__, GC_count,GC_get_full_gc_total_time());
+	BM_Harness data = { .bm = "rptest",
+				.gc_cycles = GC_count,
+				.gc_time_ms = GC_get_full_gc_total_time()};
+# else
+	BM_Harness data = { .bm = "rptest",
+				.gc_cycles = 0,
+				.gc_time_ms = 0};
+# endif
+	bmlog(&data);
 #endif
-
-
 	return 0;
 }
 
