@@ -1,0 +1,5 @@
+{
+  "bm" : "xmalloc" ,
+  "gc_cycles" : 15 ,
+  "gc_time_ms" : 1317
+}

@@ -1,0 +1,5 @@
+{
+  "bm" : "glibc_bench_thread" ,
+  "gc_cycles" : 73 ,
+  "gc_time_ms" : 1019
+}

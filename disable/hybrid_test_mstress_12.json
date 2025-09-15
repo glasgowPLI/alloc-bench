@@ -1,0 +1,5 @@
+{
+  "bm" : "mstress" ,
+  "gc_cycles" : 75 ,
+  "gc_time_ms" : 799
+}
