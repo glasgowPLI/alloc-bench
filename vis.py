@@ -38,7 +38,6 @@ def create_normalized_gc_time_chart(json_file_path_disable, json_file_path_enabl
         return
 
     if normalize:
-        # Normalized values
         hybrid_disabled_vals = [safe_divide(value, value) for value in hybrid_disabled]  
         hybrid_enabled_vals = [safe_divide(hybrid_enabled[i], hybrid_disabled[i]) for i in range(len(test_names))]
         purecap_disabled_vals = [safe_divide(purecap_disabled[i], hybrid_disabled[i]) for i in range(len(test_names))]
@@ -46,7 +45,6 @@ def create_normalized_gc_time_chart(json_file_path_disable, json_file_path_enabl
         ylabel = f'Normalized {entry.replace("-", " ").title()} (Relative to Hybrid Disabled)'
         title = f'{entry.replace("-", " ").title()} Comparison: Normalized by Hybrid Disabled Configuration'
     else:
-        # Raw values
         hybrid_disabled_vals = hybrid_disabled
         hybrid_enabled_vals = hybrid_enabled
         purecap_disabled_vals = purecap_disabled
@@ -59,10 +57,8 @@ def create_normalized_gc_time_chart(json_file_path_disable, json_file_path_enabl
     bar_width = 0.18
     x_pos = np.arange(len(test_names))
     
-    # Colors
     colors = ['#1f77b4', '#aec7e8', '#ff7f0e', '#ffbb78']
     
-    # Create bars
     bars1 = ax.bar(x_pos - 1.5*bar_width, hybrid_disabled_vals, bar_width, 
                   label='Hybrid - Inc Disabled', color=colors[0], 
                   edgecolor='black', linewidth=0.5)
@@ -76,7 +72,6 @@ def create_normalized_gc_time_chart(json_file_path_disable, json_file_path_enabl
                   label='Purecap - Inc Enabled', color=colors[3], 
                   edgecolor='black', linewidth=0.5)
     
-    # Customization
     ax.set_xlabel('Test Types', fontsize=14, fontweight='bold')
     ax.set_ylabel(ylabel, fontsize=14, fontweight='bold')
     ax.set_title(title, fontsize=16, fontweight='bold', pad=20)
@@ -84,13 +79,11 @@ def create_normalized_gc_time_chart(json_file_path_disable, json_file_path_enabl
     ax.set_xticklabels(test_names, rotation=30, ha='right', fontsize=10, wrap=True)
     ax.legend(fontsize=12, loc='upper right')
     
-    # Add horizontal reference line at 1.0 if normalized
     if normalize:
         ax.axhline(y=1.0, color='red', linestyle='--', alpha=0.7, linewidth=1)
     
-    # Add value labels
     def add_value_labels(bars):
-        y_offset = (ax.get_ylim()[1] - ax.get_ylim()[0]) * 0.02  # 2% of y-axis range
+        y_offset = (ax.get_ylim()[1] - ax.get_ylim()[0]) * 0.02
         for bar in bars:
             height = bar.get_height()
             ax.text(bar.get_x() + bar.get_width()/2., height + y_offset,
@@ -102,14 +95,12 @@ def create_normalized_gc_time_chart(json_file_path_disable, json_file_path_enabl
     add_value_labels(bars3)
     add_value_labels(bars4)
     
-    # Final touches
-    plt.tight_layout(rect=[0, 0.05, 1, 1])  # extra bottom space for labels
+    plt.tight_layout(rect=[0, 0.05, 1, 1]) 
     plt.grid(axis='y', alpha=0.2)
     plt.ylim(0, max(max(hybrid_enabled_vals), max(purecap_disabled_vals), max(purecap_enabled_vals)) * 1.2)
     
     plt.show()
 
-# Run the chart creation with user-provided parameters
 if __name__ == "__main__":
     import sys
     
