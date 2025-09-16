@@ -1,5 +1,0 @@
-{
-  "bm" : "random_mixed_alloc" ,
-  "gc_cycles" : 4220 ,
-  "gc_time_ms" : 353738
-}

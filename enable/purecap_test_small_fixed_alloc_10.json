@@ -1,5 +1,0 @@
-{
-  "bm" : "small_fixed_alloc" ,
-  "gc_cycles" : 31 ,
-  "gc_time_ms" : 628
-}

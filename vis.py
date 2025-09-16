@@ -2,24 +2,42 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 
-def read_gc_time_data(json_file_path, value, test_filter):
+def read_gc_time_data(json_file_path, entry, test_filter):
     with open(json_file_path, 'r') as f:
         data = json.load(f)
     test_names = []
     for config in data.keys():
         if config in ['hybrid', 'purecap']:
             test_names.extend(data[config].keys())
-    test_names = list(set(test_names))  
+    test_names = sorted(list(set(test_names)))
     
     hybrid = []
     purecap = []
     if test_filter == []:
         test_filter = test_names
     final_names = []
+
+    entries = entry.split(",")
+    use_division = len(entries) == 2
+    value1, value2 = entries[0], entries[1] if use_division else (entries[0], None)
+
     for test in test_names:
         if test in data.get('hybrid', {}) and test in data.get('purecap', {}) and test in test_filter:
-            hybrid.append(data['hybrid'][test].get(value, 0))
-            purecap.append(data['purecap'][test].get(value, 0))
+            if use_division:
+                h_val = safe_divide(
+                    data['hybrid'][test].get(value1, 0),
+                    data['hybrid'][test].get(value2, 1)
+                )
+                p_val = safe_divide(
+                    data['purecap'][test].get(value1, 0),
+                    data['purecap'][test].get(value2, 1)
+                )
+            else:
+                h_val = data['hybrid'][test].get(value1, 0)
+                p_val = data['purecap'][test].get(value1, 0)
+
+            hybrid.append(h_val)
+            purecap.append(p_val)
             final_names.append(test)
     return final_names, hybrid, purecap
 
@@ -32,25 +50,31 @@ def safe_divide(numerator, denominator):
 def create_normalized_gc_time_chart(json_file_path_disable, json_file_path_enable, entry='gc-time', test_filter=[], normalize=True):
     test_names, hybrid_disabled, purecap_disabled = read_gc_time_data(json_file_path_disable, entry, test_filter)
     test_names_second, hybrid_enabled, purecap_enabled = read_gc_time_data(json_file_path_enable, entry, test_filter)
-    
+
     if test_names != test_names_second or test_names == []:
         print("Invalid test sets")
         return
+
+    if "," in entry:
+        e1, e2 = entry.split(",")
+        label_name = f"{e1}/{e2}"
+    else:
+        label_name = entry
 
     if normalize:
         hybrid_disabled_vals = [safe_divide(value, value) for value in hybrid_disabled]  
         hybrid_enabled_vals = [safe_divide(hybrid_enabled[i], hybrid_disabled[i]) for i in range(len(test_names))]
         purecap_disabled_vals = [safe_divide(purecap_disabled[i], hybrid_disabled[i]) for i in range(len(test_names))]
         purecap_enabled_vals = [safe_divide(purecap_enabled[i], hybrid_disabled[i]) for i in range(len(test_names))]
-        ylabel = f'Normalized {entry.replace("-", " ").title()} (Relative to Hybrid Disabled)'
-        title = f'{entry.replace("-", " ").title()} Comparison: Normalized by Hybrid Disabled Configuration'
+        ylabel = f'Normalized {label_name.replace("-", " ").title()} (Relative to Hybrid Disabled)'
+        title = f'{label_name.replace("-", " ").title()} Comparison: Normalized by Hybrid Disabled Configuration'
     else:
         hybrid_disabled_vals = hybrid_disabled
         hybrid_enabled_vals = hybrid_enabled
         purecap_disabled_vals = purecap_disabled
         purecap_enabled_vals = purecap_enabled
-        ylabel = f'{entry.replace("-", " ").title()} (Raw Values)'
-        title = f'{entry.replace("-", " ").title()} Comparison (Raw Values)'
+        ylabel = f'{label_name.replace("-", " ").title()} (Raw Values)'
+        title = f'{label_name.replace("-", " ").title()} Comparison (Raw Values)'
 
     fig, ax = plt.subplots(figsize=(16, 9))
     
@@ -105,8 +129,9 @@ if __name__ == "__main__":
     import sys
     
     if len(sys.argv) < 3:
-        print("Usage: python3 vis.py <disable_json_file> <enable_json_file> [gc_time_entry] [normalize] [test_filter...]")
-        print("Example: python3 vis.py disable.json enable.json gc-time true barnes binary_tree cfrac")
+        print("Usage: python3 vis.py <disable_json_file> <enable_json_file> [entry or entry1,entry2] [normalize] [test_filter...]")
+        print("Example (single entry): python3 vis.py disable.json enable.json gc-time true barnes binary_tree cfrac")
+        print("Example (ratio of two entries): python3 vis.py disable.json enable.json total-time,gc-time true barnes binary_tree cfrac")
         sys.exit(1)
     
     json_file_path_disable = sys.argv[1]
@@ -128,7 +153,7 @@ if __name__ == "__main__":
     print(f"Creating chart with:")
     print(f"  Disable file: {json_file_path_disable}")
     print(f"  Enable file: {json_file_path_enable}")
-    print(f"  GC time entry: {gc_time_entry}")
+    print(f"  Entry: {gc_time_entry}")
     print(f"  Normalize: {normalize}")
     print(f"  Test filter: {test_filter}")
     
