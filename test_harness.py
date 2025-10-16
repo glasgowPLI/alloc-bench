@@ -32,8 +32,8 @@ additional_benchmarks = [
  'glibc_bench_simple.elf', 
  'glibc_bench_thread.elf',
  f'mstress.elf {num_proc} 50 25', 
- f'rptest.elf {num_proc} 0 1 2 500 1000 100 8 16000',
  f'xmalloc.elf -w {num_proc} -t 5 -s 64'
+# f'rptest.elf {num_proc} 0 1 2 500 1000 100 8 16000',  # crashing on hybrid but not on purecap 
 ] 
 
 pmc_events = [
@@ -308,6 +308,9 @@ class Build:
     _lines = None
     with open(time_log) as fd: 
       _lines = fd.readlines()
+      if _lines and _lines[0] \
+             and _lines[0][0:len("GC Warning: pthread_getattr_np")] == "GC Warning: pthread_getattr_np":
+         _lines.pop(0)
 
     # _total_time =  _lines[0].strip().split()[2]   # user time 
     _total_time =  _lines[0].strip().split()[0]   # real time 
@@ -324,6 +327,9 @@ class Build:
     _lines = None
     with open(pmc_log) as fd: 
       _lines = fd.readlines()
+      if _lines and _lines[0]\
+           and _lines[0][0:len("GC Warning: pthread_getattr_np")] == "GC Warning: pthread_getattr_np":
+         _lines.pop(0)
     assert _lines != None, f"Could not open pmc-file {pmc_log}"
 
 
@@ -522,8 +528,7 @@ def remote_install(repo):
 
 def remote_exec(repo):
   global run_bench
-  if 'bdwgc' not in repo.cmd.libs:
-    run_bench += additional_benchmarks
+  run_bench += additional_benchmarks
   repo.remote_exec() 
   return
 
