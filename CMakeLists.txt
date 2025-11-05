@@ -41,6 +41,10 @@ if (${gclib} STREQUAL bdwgc)
     else()
         list(APPEND bdwgc_cmake_args -Denable_dynamic_loading=OFF)
     endif()
+
+    if (DEFINED without_coalescing)
+        list(APPEND bdwgc_cmake_args -Dwithout_coalescing=${without_coalescing})
+    endif()
     
     message("Information:  cmake args = " ${bdwgc_cmake_args})
 
@@ -49,7 +53,7 @@ if (${gclib} STREQUAL bdwgc)
     include(ExternalProject)
     ExternalProject_Add(project_bdwgc
             GIT_REPOSITORY https://github.com/djichthys/bdwgc.git
-            GIT_TAG master
+            GIT_TAG taco25
             CMAKE_ARGS ${bdwgc_cmake_args}
             PREFIX ${bdwgc_build_prefix})
 

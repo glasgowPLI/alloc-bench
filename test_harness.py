@@ -15,7 +15,7 @@ lib_category = { 'bdwgc' : ('gc', 'libgc.so') ,
                  'snmalloc' : ('manual', 'libsnmallocshim.so'),
                  'cheribumpalloc' : ('manual', 'libcheribumpalloc.so')
                }
-num_proc = 4
+num_proc = 1
 
 run_bench = [
  'binary_tree.elf', 
@@ -30,7 +30,7 @@ run_bench = [
 
 additional_benchmarks = [ 
  'glibc_bench_simple.elf', 
- 'glibc_bench_thread.elf',
+ f'glibc_bench_thread.elf {num_proc}',
  f'mstress.elf {num_proc} 50 25', 
  f'xmalloc.elf -w {num_proc} -t 5 -s 64'
 # f'rptest.elf {num_proc} 0 1 2 500 1000 100 8 16000',  # crashing on hybrid but not on purecap 
@@ -54,11 +54,16 @@ pmc_events = [
 
 pmc_timeout = 1200 # in seconds
 
+def arch_name( arch, nocoalescing ): 
+  if arch == f'hybrid' and nocoalescing : 
+    return arch + '_nc'
+  return arch  
+
 class Build:
   def __init__(self, cmdline):
     self.cmd = cmdline
     self.bench_opts = None
-    self.arch_rdir = 'bench_bdwgc_' + self.cmd.arch
+    self.arch_rdir = 'bench_bdwgc_' + arch_name( self.cmd.arch, self.cmd.nocoalescing)
     self.append_basedir = lambda _rconn : _rconn[1] + "/"  if len(_rconn) > 1 else ""
 
   def build_dependencies(self):
@@ -116,6 +121,9 @@ class Build:
       cmake_build.append('-DBUILD_SHARED_LIBS=OFF')
     elif self.cmd.args.binlinkoption in ['dynamic', 'benchlib']:
       cmake_build.append('-DBENCHLIB=ON')
+
+    if self.cmd.nocoalescing == True: 
+      cmake_build.append('-Dwithout_coalescing=ON')
 
     ret = subprocess.run( cmake_build , check=True)
     ret.check_returncode()
@@ -178,9 +186,10 @@ class Build:
           env_libpath = ""
     else:
       env_var = { "hybrid": "LD_64", 
+                  "hybrid_nc": "LD_64", 
                   "purecap": "LD", 
                   "benchmarkabi": "LD_64CB"}
-      env_libpath = f"{env_var[self.cmd.arch]}_LIBRARY_PATH"
+      env_libpath = f"{env_var[ arch_name(self.cmd.arch, self.cmd.nocoalescing)]}_LIBRARY_PATH"
       env_libpath += f'=$(pwd) '
 
     _outfile = pathlib.Path(f'{self.cmd.out_data_dir}/{self.cmd.args.output}')
@@ -192,7 +201,7 @@ class Build:
 
     # Ensure hybrid version is executed first
     # to normalise purecap version against hybrid
-    if self.cmd.arch in ["purecap"," benchmarkabi"] and "hybrid" not in results:
+    if self.cmd.arch in ["purecap"," benchmarkabi", "hybrid_nc"] and "hybrid" not in results:
       sys.exit("Could not find hybrid results. Execute hybrid results before purecap and benchmarkabi")
 
 
@@ -253,7 +262,7 @@ class Build:
         ret.check_returncode()
 
 
-      _tmpfile = f'{host_data_dir}/{self.cmd.arch}_{_outfile.stem}_{bm_p.split()[0]}_{_idx:02}{"".join(_outfile.suffixes)}'
+      _tmpfile = f'{host_data_dir}/{arch_name(self.cmd.arch, self.cmd.nocoalescing)}_{_outfile.stem}_{bm_p.split()[0]}_{_idx:02}{"".join(_outfile.suffixes)}'
       # Copy logfile from install directory to remote-install dir
       ret = subprocess.run( ['scp', '-P', self.cmd.sshport, 
                              f'{_rconn_param[0]}:{self.append_basedir(_rconn_param)}'
@@ -277,29 +286,30 @@ class Build:
         self.__extract_pmc_results(_data, pathlib.Path( _tmpfile_pmc))
         self.__append_results(results, _data, bm_p, _idx)
     else:
+        current_arch = arch_name(self.cmd.arch, self.cmd.nocoalescing)
         _mean = lambda _arr: np.mean(_arr) if np.count_nonzero(_arr) == _arr.size else 0.0
         _gmean = lambda _arr : np.exp(np.log(_arr).mean()) if np.count_nonzero(_arr) == _arr.size else 0.0
-        results[self.cmd.arch][bm_p]["gc-cycles"] = _mean(np.array(results[self.cmd.arch][bm_p]["raw-gc-cycles"])) 
-        results[self.cmd.arch][bm_p]["gc-time"] = _mean(np.array(results[self.cmd.arch][bm_p]["raw-gc-time"]))
-        results[self.cmd.arch][bm_p]["total-time"] = _mean(np.array(results[self.cmd.arch][bm_p]["raw-total-time"]))
-        results[self.cmd.arch][bm_p]["rss-kb"] = _mean(np.array(results[self.cmd.arch][bm_p]["raw-rss-kb"]))
-        if results[self.cmd.arch][bm_p]["total-time"] > 0.0: 
-          results[self.cmd.arch][bm_p]["gc-load"] = results[self.cmd.arch][bm_p]["gc-time"] / results[self.cmd.arch][bm_p]["total-time"]
-          self.normal(results, bm_p, "total-time") 
+        results[current_arch][bm_p]["gc-cycles"] = _mean(np.array(results[current_arch][bm_p]["raw-gc-cycles"])) 
+        results[current_arch][bm_p]["gc-time"] = _mean(np.array(results[current_arch][bm_p]["raw-gc-time"]))
+        results[current_arch][bm_p]["total-time"] = _mean(np.array(results[current_arch][bm_p]["raw-total-time"]))
+        results[current_arch][bm_p]["rss-kb"] = _mean(np.array(results[current_arch][bm_p]["raw-rss-kb"]))
+        if results[current_arch][bm_p]["total-time"] > 0.0: 
+          results[current_arch][bm_p]["gc-load"] = results[current_arch][bm_p]["gc-time"] / results[current_arch][bm_p]["total-time"]
+          self.normal(results, current_arch, bm_p, "total-time") 
 
-        self.normal(results, bm_p, "gc-cycles") 
-        self.normal(results, bm_p, "gc-time") 
-        self.normal(results, bm_p, "gc-load")
-        self.normal(results, bm_p, "rss-kb") 
+        self.normal(results, current_arch, bm_p, "gc-cycles") 
+        self.normal(results, current_arch, bm_p, "gc-time") 
+        self.normal(results, current_arch, bm_p, "gc-load")
+        self.normal(results, current_arch, bm_p, "rss-kb") 
 
         for _event in pmc_events:
-          results[self.cmd.arch][bm_p][_event] = _gmean(np.array(results[self.cmd.arch][bm_p][f"raw-{_event}"]))
-          self.normal(results, bm_p, _event) 
+          results[current_arch][bm_p][_event] = _gmean(np.array(results[current_arch][bm_p][f"raw-{_event}"]))
+          self.normal(results, current_arch, bm_p, _event) 
         print(f"\n total_time:{results[self.cmd.arch][bm_p]['total-time']}, gc-time:{results[self.cmd.arch][bm_p]['gc-time']}")
 
-  def normal(self, results, bm,  event):
+  def normal(self, results, current_arch, bm,  event):
     if results["hybrid"][bm][event] > 0.0 :
-      results[self.cmd.arch][bm][f"normalised-{event}"] = results[self.cmd.arch][bm][event] / results["hybrid"][bm][event]
+      results[current_arch][bm][f"normalised-{event}"] = results[current_arch][bm][event] / results["hybrid"][bm][event]
 
 
   # Extract Total time and RSS figures
@@ -340,11 +350,12 @@ class Build:
       result[_evt] = _val
 
   def __append_results(self, result, new_data, bm, run):
-    if self.cmd.arch not in result:
-      result[self.cmd.arch] = {} 
+    current_arch = arch_name(self.cmd.arch, self.cmd.nocoalescing)
+    if current_arch not in result:
+      result[current_arch] = {} 
       
-    if new_data["bm"] not in result[self.cmd.arch]: 
-      result[self.cmd.arch][new_data["bm"]] = { "raw-gc-cycles" : [], 
+    if new_data["bm"] not in result[current_arch]: 
+      result[current_arch][new_data["bm"]] = {  "raw-gc-cycles" : [], 
                                                 "gc-cycles" : 0.0, 
                                                 "normalised-gc-cycles" : 0.0, 
                                                 "raw-gc-time" : [], 
@@ -359,18 +370,18 @@ class Build:
                                                 "gc-load" : 0.0,
                                               } 
       for _event in pmc_events:
-        result[self.cmd.arch][new_data["bm"]].setdefault(f"raw-{_event}", [])
-        result[self.cmd.arch][new_data["bm"]].setdefault(f"{_event}", 0.0)
-        result[self.cmd.arch][new_data["bm"]].setdefault(f"normalised-{_event}", 0.0)
+        result[current_arch][new_data["bm"]].setdefault(f"raw-{_event}", [])
+        result[current_arch][new_data["bm"]].setdefault(f"{_event}", 0.0)
+        result[current_arch][new_data["bm"]].setdefault(f"normalised-{_event}", 0.0)
 
-    result[self.cmd.arch][new_data["bm"]]["raw-gc-cycles"] += [float(new_data["gc_cycles"])]
-    result[self.cmd.arch][new_data["bm"]]["raw-gc-time"] += [float(new_data["gc_time_ms"])]
-    result[self.cmd.arch][new_data["bm"]]["raw-total-time"] += [float(new_data["total_time_ms"]) * 1000]
-    result[self.cmd.arch][new_data["bm"]]["raw-rss-kb"] += [int(new_data["rss_kb"])]
+    result[current_arch][new_data["bm"]]["raw-gc-cycles"] += [float(new_data["gc_cycles"])]
+    result[current_arch][new_data["bm"]]["raw-gc-time"] += [float(new_data["gc_time_ms"])]
+    result[current_arch][new_data["bm"]]["raw-total-time"] += [float(new_data["total_time_ms"]) * 1000]
+    result[current_arch][new_data["bm"]]["raw-rss-kb"] += [int(new_data["rss_kb"])]
 
     # add all pmc hw events 
     for _event in pmc_events:
-      result[self.cmd.arch][new_data["bm"]][f"raw-{_event}"] += [int(new_data[_event])]
+      result[current_arch][new_data["bm"]][f"raw-{_event}"] += [int(new_data[_event])]
 
 class CommandLine:
   def __init__(self, name=None, desc=None, epilogue=None):
@@ -381,11 +392,12 @@ class CommandLine:
     self.arch = self.args.march
     self.sshport = self.args.sshport
     self.libs = self.args.libs
+    self.nocoalescing = self.args.nocoalescing
 
     self.buildtype = self.args.buildtype
     self.workdir = self.args.workdir
-    self.build_dir = f"build-bench-{self.arch}"
-    self.install_dir = f"install-bench-{self.arch}"
+    self.build_dir = f"build-bench-{arch_name(self.arch, self.nocoalescing)}"
+    self.install_dir = f"install-bench-{arch_name(self.arch, self.nocoalescing)}"
     self.out_data_dir = "output-data"
     self.dependency_dir = "cheribuild"
 
@@ -493,6 +505,8 @@ class CommandLine:
     self.parser.add_argument('-o', '--output', 
                              default = 'out.json', 
                              help=f"output-data file name. This will be found in the directory specified with -w")
+    self.parser.add_argument('-c', '--nocoalescing', action='store_true',
+                             default=False, help=f"Explicitly turn off coalescing for Hybrid arch")
     self.parser.add_argument('-v', '--verbose', action='store_true',
                              default=False, help=f"print parsed cmdline options")
 
@@ -572,6 +586,7 @@ def verbose(repo):
   print(f"--sshport                 : {repo.cmd.sshport}")
   print(f"--output                  : {repo.cmd.args.output}")
   print(f"--binlinkoption           : {repo.cmd.args.binlinkoption}")
+  print(f"--nocoalescing            : {repo.cmd.nocoalescing}")
 
 
 if __name__ == '__main__':
