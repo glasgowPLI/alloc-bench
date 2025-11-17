@@ -15,7 +15,7 @@ lib_category = { 'bdwgc' : ('gc', 'libgc.so') ,
                  'snmalloc' : ('manual', 'libsnmallocshim.so'),
                  'cheribumpalloc' : ('manual', 'libcheribumpalloc.so')
                }
-num_proc = 1
+num_proc = 4
 
 run_bench = [
  'binary_tree.elf', 
