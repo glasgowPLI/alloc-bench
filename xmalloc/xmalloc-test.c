@@ -78,28 +78,27 @@ struct timeval begin;
 #define atomic_store(addr, v) __atomic_store_n(addr, v, __ATOMIC_RELEASE)
 
 
-static void
-tvsub(tdiff, t1, t0)
+static void tvsub(tdiff, t1, t0)
 	struct timeval *tdiff, *t1, *t0;
 {
 
-	tdiff->tv_sec = t1->tv_sec - t0->tv_sec;
-	tdiff->tv_usec = t1->tv_usec - t0->tv_usec;
-	if (tdiff->tv_usec < 0)
-		tdiff->tv_sec--, tdiff->tv_usec += 1000000;
+  tdiff->tv_sec = t1->tv_sec - t0->tv_sec;
+  tdiff->tv_usec = t1->tv_usec - t0->tv_usec;
+  if (tdiff->tv_usec < 0)
+    tdiff->tv_sec--, tdiff->tv_usec += 1000000;
 }
 
 double elapsed_time(struct timeval *time0)
 {
-	struct timeval timedol;
-	struct timeval td;
-	double et = 0.0;
+  struct timeval timedol;
+  struct timeval td;
+  double et = 0.0;
 
-	gettimeofday(&timedol, (struct timezone *)0);
-	tvsub( &td, &timedol, time0 );
-	et = td.tv_sec + ((double)td.tv_usec) / 1000000;
+  gettimeofday(&timedol, (struct timezone *)0);
+  tvsub( &td, &timedol, time0 );
+  et = td.tv_sec + ((double)td.tv_usec) / 1000000;
 
-	return( et );
+  return( et );
 }
 
 static const long possible_sizes[] = {8,12,16,24,32,48,64,96,128,192,256,(256*3)/2,512, (512*3)/2, 1024, (1024*3)/2, 2048};
@@ -113,6 +112,9 @@ struct batch {
 
 volatile struct batch *batches = NULL;
 volatile int batch_count = 0;
+volatile unsigned long long total_batch_count = 0;
+volatile unsigned long long max_batches = 0;
+#define BASELINE_ALLOC_PER_SEC (4 * 768 * 1024)
 const int batch_count_limit = 100;
 pthread_cond_t empty_cv = PTHREAD_COND_INITIALIZER;
 pthread_cond_t full_cv = PTHREAD_COND_INITIALIZER;
@@ -126,6 +128,7 @@ void enqueue_batch(struct batch *batch) {
   batch->next_batch = batches;
   batches = batch;
   batch_count++;
+  total_batch_count++;  // DJ - change to convert to fixed workload
   pthread_cond_signal(&empty_cv);
   pthread_mutex_unlock(&lock);
 }
@@ -169,7 +172,7 @@ void *mem_releaser(void *arg) {
     struct batch *b = dequeue_batch();
     if (b) {
       for (int i = 0; i < OBJECTS_PER_BATCH; i++) {
-	      xfree(b->objects[i]);
+        xfree(b->objects[i]);
       }
       xfree(b);
     }
@@ -180,70 +183,71 @@ void *mem_releaser(void *arg) {
 
 int run_memory_free_test()
 {
-	void *ptr = NULL;
-	int i;
-	double elapse_time = 0.0;
-	long total = 0;
-	int *ids = (int *)xmalloc(sizeof(int) * num_workers);
+  void *ptr = NULL;
+  int i;
+  double elapse_time = 0.0;
+  long total = 0;
+  int *ids = (int *)xmalloc(sizeof(int) * num_workers);
 
-	/* Initialize counter */
-	for(i = 0; i < num_workers; ++i)
-		counters[i].c = 0;
+  /* Initialize counter */
+  for(i = 0; i < num_workers; ++i)
+    counters[i].c = 0;
 
-	gettimeofday(&begin, (struct timezone *)0);
+  gettimeofday(&begin, (struct timezone *)0);
 
-	/* Start up the mem_allocator and mem_releaser threads  */
-	for(i = 0; i < num_workers; ++i) {
-		ids[i] = i;
-		if (verbose_flag) printf("Starting mem_releaser %i ...\n", i);
-		if (pthread_create(&thread_ids[i * 2], NULL, mem_releaser, (void *)&ids[i])) {
-			perror("pthread_create mem_releaser");
-			exit(errno);
-		}
+  /* Start up the mem_allocator and mem_releaser threads  */
+  for(i = 0; i < num_workers; ++i) {
+    ids[i] = i;
+    if (verbose_flag) printf("Starting mem_releaser %i ...\n", i);
+    if (pthread_create(&thread_ids[i * 2], NULL, mem_releaser, (void *)&ids[i])) {
+      perror("pthread_create mem_releaser");
+      exit(errno);
+    }
 
-		if (verbose_flag) printf("Starting mem_allocator %i ...\n", i);
-		if (pthread_create(&thread_ids[i * 2 + 1], NULL, mem_allocator, (void *)&ids[i])) {
-			perror("pthread_create mem_allocator");
-			exit(errno);
-		}
-	}
+    if (verbose_flag) printf("Starting mem_allocator %i ...\n", i);
+    if (pthread_create(&thread_ids[i * 2 + 1], NULL, mem_allocator, (void *)&ids[i])) {
+      perror("pthread_create mem_allocator");
+      exit(errno);
+    }
+  }
 
-	if (verbose_flag) printf("Testing for %.2f seconds\n\n", run_time);
+  if (verbose_flag) printf("Testing for %.2f seconds\n\n", run_time);
 
-	while (1) {
-	  usleep(1000);
-	  if (elapsed_time(&begin) > run_time) {
-	    atomic_store(&done_flag, 1);
-	    pthread_cond_broadcast(&empty_cv);
-	    pthread_cond_broadcast(&full_cv);
-	    break;
-	  }
-	}
+  while (1) {
+    usleep(1000);
+    // if (elapsed_time(&begin) > run_time) { // DJ - commented to convert to fixed workload
+    if (total_batch_count > max_batches) {  // DJ - changed to convert to fixed workload 
+      atomic_store(&done_flag, 1);
+      pthread_cond_broadcast(&empty_cv);
+      pthread_cond_broadcast(&full_cv);
+      break;
+    }
+  }
 
   for(i = 0; i < num_workers * 2; ++i)
     pthread_join (thread_ids[i], &ptr);
 
-	elapse_time = elapsed_time (&begin);
+  elapse_time = elapsed_time (&begin);
 
-	for(i = 0; i < num_workers; ++i) {
-		if (verbose_flag) {
-			printf("Thread %2i frees %ld blocks in %.2f seconds. %.2f free/sec.\n",
-			       i, counters[i].c, elapse_time, ((double)counters[i].c/elapse_time));
-		}
-	}
-	if (verbose_flag) printf("----------------------------------------------------------------\n");
-	for(i = 0; i < num_workers; ++i) total += counters[i].c;
-	if (verbose_flag)
-	  printf("Total %ld freed in %.2f seconds. %.2fM free/second\n",
-		 total, elapse_time, ((double) total/elapse_time)*1e-6);
-	else {
+  for(i = 0; i < num_workers; ++i) {
+    if (verbose_flag) {
+      printf("Thread %2i frees %ld blocks in %.2f seconds. %.2f free/sec.\n",
+             i, counters[i].c, elapse_time, ((double)counters[i].c/elapse_time));
+    }
+  }
+  if (verbose_flag) printf("----------------------------------------------------------------\n");
+  for(i = 0; i < num_workers; ++i) total += counters[i].c;
+  if (verbose_flag)
+    printf("Total %ld freed in %.2f seconds. %.2fM free/second\n",
+              total, elapse_time, ((double) total/elapse_time)*1e-6);
+  else {
     double mfree_per_sec = ((double)total/elapse_time) * 1e-6;
     double rtime = 100.0 / mfree_per_sec;
-	  printf("rtime: %.3f, free/sec: %.3f M\n", rtime, mfree_per_sec);
+    printf("rtime: %.3f, free/sec: %.3f M\n", rtime, mfree_per_sec);
   }
-	if (verbose_flag) printf("Program done\n");
+  if (verbose_flag) printf("Program done\n");
   if (ids!=NULL) xfree(ids);
-	return(0);
+  return(0);
 }
 
 void usage(char *prog)
@@ -271,73 +275,83 @@ int main(int argc, char **argv)
 int bench_main(int argc, char **argv)
 #endif
 {
-	int c;
-	while ((c = getopt(argc, argv, "w:t:ds:v")) != -1) {
+  int c;
+  unsigned int seconds = 0; 
+  while ((c = getopt(argc, argv, "w:t:ds:v")) != -1) {
 
-		switch (c) {
+    switch (c) {
 
-		case 'w':
-			num_workers = atoi(optarg);
-			break;
-		case 't':
-			run_time = atof(optarg);
-			break;
-		case 'd':
-			debug_flag = 1;
-			break;
-		case 's':
-			object_size = atoi(optarg);
-			break;
-		case 'v':
-			verbose_flag++;
-			break;
-		default:
-			usage(argv[0]);
-		}
-	}
+    case 'w':
+      num_workers = atoi(optarg);
+      break;
+    case 't':
+      run_time = atof(optarg);
+      seconds = atoi(optarg);
+      break;
+    case 'd':
+      debug_flag = 1;
+      break;
+    case 's':
+      object_size = atoi(optarg);
+      break;
+    case 'v':
+      verbose_flag++;
+      break;
+    default:
+      usage(argv[0]);
+    }
+  }
 #if defined(BDWGC)
-	GC_INIT();
-	if (!GC_get_start_callback()) {
-		GC_set_start_callback(signal_gc);
-		GC_start_performance_measurement();
-	} else {
-		printf("[%s:%u] | GC-notify callback already set\n", __FUNCTION__, __LINE__);
-	}
+  GC_INIT();
+  if (!GC_get_start_callback()) {
+    GC_set_start_callback(signal_gc);
+    GC_start_performance_measurement();
+  } else {
+    printf("[%s:%u] | GC-notify callback already set\n", __FUNCTION__, __LINE__);
+  }
 #endif
 
-	/* allocate memory for working arrays */
-	thread_ids = (pthread_t *) xmalloc(sizeof(pthread_t) * num_workers * 2);
-	counters = (struct counter *) xmalloc(sizeof(*counters) * num_workers);
+  /* allocate memory for working arrays */
+  thread_ids = (pthread_t *) xmalloc(sizeof(pthread_t) * num_workers * 2);
+  counters = (struct counter *) xmalloc(sizeof(*counters) * num_workers);
+  /*! 
+   * DJ - conversion to fixed workload for time measurement 
+   */
+  max_batches = BASELINE_ALLOC_PER_SEC * seconds / OBJECTS_PER_BATCH; 
+  if (verbose_flag) { 
+    printf("max number of batches = %llu (allocs-per-thread (%lu) * runtime (%u)) / OBJECTS_PER_BATCH (%u)\r\n", 
+              max_batches, BASELINE_ALLOC_PER_SEC, seconds, OBJECTS_PER_BATCH); 
+  } 
 
-	run_memory_free_test();
+  run_memory_free_test();
 
   while (batches) {
-	  struct batch *b = batches;
-	  batches = b->next_batch;
-	  for (int i = 0 ; i < OBJECTS_PER_BATCH; i++) {
-	    xfree(b->objects[i]);
-	  }
-	  xfree(b);
-	}
+    struct batch *b = batches;
+    batches = b->next_batch;
+    for (int i = 0 ; i < OBJECTS_PER_BATCH; i++) {
+      xfree(b->objects[i]);
+    }
+    xfree(b);
+  }
   
   xfree(thread_ids);
   xfree(counters);
 
 #if defined(BM_LOGFILE)
 # if defined(BDWGC)
-	printf("[%s:%d] | number of gc- cycles complete = %u, total-gc-time = %u\n",
-			__FUNCTION__ , __LINE__, GC_count,GC_get_full_gc_total_time());
-	BM_Harness data = { .bm = "xmalloc",
-				.gc_cycles = GC_count,
-				.gc_time_ms = GC_get_full_gc_total_time()};
+  printf("[%s:%d] | number of gc- cycles complete = %u, total-gc-time = %u\n",
+      __FUNCTION__ , __LINE__, GC_count,GC_get_full_gc_total_time());
+  BM_Harness data = { .bm = "xmalloc",
+                      .gc_cycles = GC_count,
+                      .gc_time_ms = GC_get_full_gc_total_time()};
 # else
-	BM_Harness data = { .bm = "xmalloc",
-				.gc_cycles = 0,
-				.gc_time_ms = 0};
+  BM_Harness data = { .bm = "xmalloc",
+                      .gc_cycles = 0,
+                      .gc_time_ms = 0};
 # endif
-	bmlog(&data);
+  bmlog(&data);
 #endif
 
 
-	return 0;
+  return 0;
 }

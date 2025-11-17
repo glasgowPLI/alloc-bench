@@ -56,10 +56,15 @@
 #if defined(BM_LOGFILE)
 #  include "bench_harness.h"
 #endif
-
+      
+#define atomic_load(addr) __atomic_load_n(addr, __ATOMIC_CONSUME)
+#define atomic_store(addr, v) __atomic_store_n(addr, v, __ATOMIC_RELEASE)
 
 /* Benchmark duration in seconds.  */
-#define BENCHMARK_DURATION	2
+#define BENCHMARK_DURATION	8
+#define BENCHMARK_LOAD_PER_SEC 	(4 * 1024 * 1024) 
+#define BENCHMARK_LOAD (BENCHMARK_LOAD_PER_SEC * BENCHMARK_DURATION)
+
 #define RAND_SEED		88
 
 #ifndef NUM_THREADS
@@ -160,7 +165,7 @@ alarm_handler (int signum)
 
 /* Allocate and free blocks in a random order.  */
 static size_t
-malloc_benchmark_loop (void **ptr_arr)
+malloc_benchmark_loop (void **ptr_arr, volatile size_t *monitor)
 {
   unsigned int offset_state = 0, block_state = 0;
   size_t iters = 0;
@@ -179,6 +184,7 @@ malloc_benchmark_loop (void **ptr_arr)
         ((char*)p)[i] = (char)i;
       }
       iters++;
+      atomic_store(monitor, iters);
     }
 
   return iters;
@@ -187,6 +193,7 @@ malloc_benchmark_loop (void **ptr_arr)
 struct thread_args
 {
   size_t iters;
+  size_t fwl_iters; 
   void **working_set;
   timing_t elapsed;
 };
@@ -200,7 +207,7 @@ benchmark_thread (void *arg)
   timing_t start, stop;
 
   TIMING_NOW (start);
-  iters = malloc_benchmark_loop (thread_set);
+  iters = malloc_benchmark_loop (thread_set, &args->fwl_iters);
   TIMING_NOW (stop);
 
   TIMING_DIFF (args->elapsed, start, stop);
@@ -213,8 +220,10 @@ static timing_t
 do_benchmark (size_t num_threads, size_t *iters)
 {
   timing_t elapsed = 0;
+  size_t fwl_iters = 0; 
 
-  if (num_threads == 1)
+  //if (num_threads == 1)  // DJ - convert to fixed workload. Use glibc-bench-simple for single threaded 
+  if (num_threads == 0)
     {
       timing_t start, stop;
       void *working_set[WORKING_SET_SIZE];
@@ -222,7 +231,7 @@ do_benchmark (size_t num_threads, size_t *iters)
       memset (working_set, 0, sizeof (working_set));
 
       TIMING_NOW (start);
-      *iters = malloc_benchmark_loop (working_set);
+      *iters = malloc_benchmark_loop (working_set, &fwl_iters);
       TIMING_NOW (stop);
 
       TIMING_DIFF (elapsed, start, stop);
@@ -242,6 +251,20 @@ do_benchmark (size_t num_threads, size_t *iters)
 	  args[i].working_set = working_set[i];
 	  pthread_create(&threads[i], NULL, benchmark_thread, &args[i]);
 	}
+
+      /*! 
+       * DJ - following single loop added to convert to fixed width 
+       */
+      while (!timeout) {
+        fwl_iters = 0; 
+        for (size_t i = 0; i < num_threads; i++) { 
+          fwl_iters += atomic_load(&(args[i].fwl_iters));
+        } 
+	if (fwl_iters > BENCHMARK_LOAD) { 
+	  timeout = true; 
+          printf("[%s:%u] | fwl-iters : %lu\r\n" , __FUNCTION__, __LINE__, fwl_iters); 
+	} 
+      }
 
       for (size_t i = 0; i < num_threads; i++)
 	{
@@ -329,9 +352,10 @@ int bench_main (int argc, char **argv)
   memset (&act, 0, sizeof (act));
   act.sa_handler = &alarm_handler;
 
+  #if 0   // Convert to fixed work load
   sigaction (SIGALRM, &act, NULL);
-
   alarm (BENCHMARK_DURATION);
+  #endif 
   
   cur = do_benchmark (num_threads, &iters);
   printf("%zd iterations\n", iters );

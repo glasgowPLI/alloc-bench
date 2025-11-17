@@ -15,7 +15,7 @@ lib_category = { 'bdwgc' : ('gc', 'libgc.so') ,
                  'snmalloc' : ('manual', 'libsnmallocshim.so'),
                  'cheribumpalloc' : ('manual', 'libcheribumpalloc.so')
                }
-num_proc = 1
+num_proc = 4
 
 run_bench = [
  'binary_tree.elf', 
@@ -32,7 +32,7 @@ additional_benchmarks = [
  'glibc_bench_simple.elf', 
  f'glibc_bench_thread.elf {num_proc}',
  f'mstress.elf {num_proc} 50 25', 
- f'xmalloc.elf -w {num_proc} -t 5 -s 64'
+ f'xmalloc.elf -w {num_proc} -t 16 -s 64'
 # f'rptest.elf {num_proc} 0 1 2 500 1000 100 8 16000',  # crashing on hybrid but not on purecap 
 ] 
 
@@ -46,8 +46,9 @@ pmc_events = [
  'L1I_CACHE_REFILL', 
  'L1D_CACHE_REFILL', 
  'L2D_CACHE_REFILL', 
- 'LL_CACHE_RD'
-# 'LL_CACHE_MISS_RD',
+ 'LL_CACHE_MISS_RD'
+#### pmcstat can only do up to 10 events at a time
+# 'LL_CACHE_RD',
 # 'BUS_ACCESS', 
 # 'BUS_ACCESS_RD_CTAG' 
 ] 
