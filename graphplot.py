@@ -660,6 +660,20 @@ m_arch_colors = { "hybrid_nc" : "red",
 #    plt.close()
 #
 
+def norm_conf_interval(data, mode, bm, evt, confidence=98): 
+  assert mode != "hybrid", f"Normalisation of hybrid vs hybrid invalid"
+  hybrid_mean = st.mean(data["hybrid"][bm][f"raw-{evt}"]) 
+  hybrid_std_dev = st.stdev(data["hybrid"][bm][f"raw-{evt}"]) 
+  hybrid_len = len(data["hybrid"][bm][f"raw-{evt}"]) 
+
+
+  dev_mode_mean = st.mean(data[mode][bm][f"raw-{evt}"]) 
+  dev_mode_std_dev = st.stdev(data[mode][bm][f"raw-{evt}"]) 
+  dev_mode_len = len(data[mode][bm][f"raw-{evt}"]) 
+  assert hybrid_len == dev_mode_len, f"len(hybrid raw-{evt}) [{hybrid_len}] != len({mode} raw-{evt}) [{dev_mode_len}]"
+  norm_std_dev = math.sqrt(pow(hybrid_std_dev/hybrid_mean, 2) + pow(dev_mode_std_dev/dev_mode_mean, 2)) * (dev_mode_mean/hybrid_mean)
+  return zval[confidence] * norm_std_dev / math.sqrt(hybrid_len) 
+
 # Generate a list of locations for the start of bars and tick locations 
 # on the bar-chart
 def gen_bunched_bar_loc(obj_json, bw=0.5, sw=0.5, offset=0.5, strip_zero=False):
@@ -678,16 +692,33 @@ def gen_bunched_bar_loc(obj_json, bw=0.5, sw=0.5, offset=0.5, strip_zero=False):
     bin_start = benchmark_end 
   return (tick_labels, tick_pos, bar_pos)
 
-def gen_barchart(data, separate, conf_interval):
-  tick_lbl, tick_x, bar_x = gen_bunched_bar_loc(data, bw=0.5, sw=0.5, offset=0.5, strip_zero=False)
+def gen_combined_barchart(data, events, conf_interval=95):
+  temp = dict(data)
+  hybrid_data = temp.pop("hybrid") 
+  plot_data = temp
+
+  tick_lbl, tick_x, bar_x = gen_bunched_bar_loc(plot_data, bw=0.5, sw=0.5, offset=0.5, strip_zero=False)
   adjust = {"_left" : 0.0,
      "_right": 0.0,
      "_bottom" : -0.2,
      "_top":0.0,
      "_hspace":0.0}
 
-  benchmark_list = list(result_data['purecap'].keys())
-  tick_lbl, tick_x, bar_x = gen_bunched_bar_loc(result_data)
+  _fig, _subplot = plt.subplots(nrows=len(events), ncols=1, sharex=False)
+  _fig.tight_layout()
+
+  benchmarks = list(result_data['purecap'].keys())
+  dev_modes = ["hybrid_nc", "purecap", "benchmarkabi"] 
+  for evt_idx, evt in enumerate(event_list): 
+    norm_evt = f"normalised-{evt}"
+    max_norm_err = 0.0
+    for mode_idx, mode in dev_modes: 
+      norm_err = [ norm_conf_interval(data, mode, _bm, evt, confidence) for _bm in benchmarks ]
+      if max(norm_err) > max_norm_err: 
+        max_norm_err = max(norm_err)
+
+      max_norm_err = 0.0
+
 
   
 def plot(json_file, events, separate_files, conf_interval=95): 
@@ -701,12 +732,10 @@ def plot(json_file, events, separate_files, conf_interval=95):
   if separate_files: 
     assert False, "Separate files not yet implemented"
   else: 
-    gen_barchart(result_data, separate_files, conf_interval) 
+    gen_combined_barchart(result_data, events, conf_interval=conf_interval) 
 
 
   assert len(events) > 0, f"Provide atleast one event to plot graph for" 
-  _fig, _subplot = plt.subplots(nrows=len(events), ncols=1, sharex=False)
-  _fig.tight_layout()
 
   hybrid_measure, hybrid_err = ([], [])
   hybrid_nc_measure, hybrid_nc_err = ([], [])
@@ -770,7 +799,7 @@ if __name__ == '__main__':
                       default = 'output.pdf',
                        help=f"output-plot file name. suffix should end in {out_formats}")
   parser.add_argument('-t', '--graphtypes', nargs='*',
-                             choices = ['individual'], 
+                             choices = ['individual', 'combined'], 
                              default = ['individual'],
                              help=f"graph types to plot execute. These may be combined together to do both")
                              #choices = ['individual', 'combined', 'separated', 'alloc-times'],
