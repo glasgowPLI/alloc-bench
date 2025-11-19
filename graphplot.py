@@ -72,32 +72,22 @@ color_grid = { "total-time" : "cadetblue",
                "MEM_ACCESS": "thistle",
                } 
 
-m_arch_colors = { "hybrid_nc" : "red", 
-                 "purecap" : "green",
-                 "benchmarkabi" : "blue"
+
+march_y_labels = { "hybrid": ("Hybrid", "accesses"),
+                   "hybrid_nc": ("Hybrid No-Coalescing", "accesses"),
+                   "purecap": ("Purecap", "accesses"),
+                   "benchmarkabi": ("Benchmark ABI", "accesses")
+                   }
+
+
+m_arch_colors = { "hybrid_nc" : "cadetblue", 
+                 "purecap" : "moccasin",
+                 "benchmarkabi" : "tomato",
+                 "hybrid" : "sandybrown",
                 } 
 
 
 
-#def render(outfile, adjust=None):
-#    if adjust != None :
-#        _left, _right, _bottom, _top, _hspace = adjust
-#        print(f"render() adjust:{adjust}")
-#        print(f"render() _left:{_left}, _right:{_right}, _bottom:{_bottom},_top:{_top},_hspace:{_hspace}")
-#        plt.subplots_adjust(left=_left,right=_right,bottom=_bottom,top=_top,hspace=_hspace)
-#
-#    _suffix = outfile.suffix.lstrip(".")
-#    assert _suffix.lstrip(".") in out_formats, f"invalid output file ({outfile})format {_suffix.lstrip('.')}. " \
-#                                                              f"acceptable formats -> {out_formats}"
-#    
-#    plt.draw()
-#    plt.pause(0.5)
-#    input("<Press Enter to continue>")
-#    plt.savefig(f"{outfile}",format="pdf")
-#    plt.close()
-#
-#
-#
 #def gen_barchart(data, separate, strip_zero, conf_interval):
 #  tick_lbl, tick_x, bar_x = gen_bunched_bar_loc(data, bw=0.5, sw=0.5, offset=0.5, strip_zero=strip_zero)
 #  
@@ -680,9 +670,11 @@ def gen_bunched_bar_loc(obj_json, bw=0.5, sw=0.5, offset=0.5, strip_zero=False):
   tick_pos, bar_pos = ([], [ [] for _bm in obj_json.keys()])
   num_bins = len(obj_json.keys())  # hybrid-nc + purecap + benchmark-abi
   tick_labels = list(obj_json["hybrid" if "hybrid" in obj_json else "purecap"].keys())
+  tick_labels += ["geo-mean"]
 
   # Calculate bar and tick positions
   bin_start = offset
+  vline_pos = offset + ((len(tick_labels) - 1) * ((num_bins * bw) + sw)) - (sw/2)
   for idx_i in range(len(tick_labels)):
     data_end = bin_start + ((num_bins)*bw)
     benchmark_end = bin_start + ((num_bins)*bw) + sw
@@ -690,34 +682,55 @@ def gen_bunched_bar_loc(obj_json, bw=0.5, sw=0.5, offset=0.5, strip_zero=False):
       bar_pos[_bin].append(bin_start + (_bin * bw) + bw/2)
     tick_pos.append((data_end + bin_start)/2)
     bin_start = benchmark_end 
-  return (tick_labels, tick_pos, bar_pos)
+  return (tick_labels, tick_pos, bar_pos, vline_pos)
 
-def gen_combined_barchart(data, events, conf_interval=95):
+def gen_combined_barchart(data, event_list, conf_interval=95):
   temp = dict(data)
   hybrid_data = temp.pop("hybrid") 
   plot_data = temp
 
-  tick_lbl, tick_x, bar_x = gen_bunched_bar_loc(plot_data, bw=0.5, sw=0.5, offset=0.5, strip_zero=False)
+  tick_lbl, tick_x, bar_x, vline_barpos = gen_bunched_bar_loc(plot_data, bw=0.5, sw=0.5, offset=0.5, strip_zero=False)
   adjust = {"_left" : 0.0,
      "_right": 0.0,
      "_bottom" : -0.2,
      "_top":0.0,
      "_hspace":0.0}
 
-  _fig, _subplot = plt.subplots(nrows=len(events), ncols=1, sharex=False)
+  _fig, _subplot = plt.subplots(nrows=len(event_list), ncols=1, sharex=False)
   _fig.tight_layout()
+  print(f"tick_lbl = {tick_lbl}\n================")
+  print(f"tick_x  = {tick_x}\n================")
+  print(f"bar_x = {bar_x}\n================")
+  print(f"vline_pos = {vline_barpos}\n================")
 
-  benchmarks = list(result_data['purecap'].keys())
+  _gmean = lambda _arr : np.exp(np.log(_arr).mean()) if np.count_nonzero(_arr) == _arr.size else 0.0
+  benchmarks = list(data['purecap'].keys())
   dev_modes = ["hybrid_nc", "purecap", "benchmarkabi"] 
+  event_counts = { _evt: {} for _evt in event_list } 
   for evt_idx, evt in enumerate(event_list): 
     norm_evt = f"normalised-{evt}"
     max_norm_err = 0.0
-    for mode_idx, mode in dev_modes: 
-      norm_err = [ norm_conf_interval(data, mode, _bm, evt, confidence) for _bm in benchmarks ]
+    for mode_idx, mode in enumerate(dev_modes): 
+      norm_err = [ norm_conf_interval(data, mode, _bm, evt, conf_interval) for _bm in benchmarks ]
       if max(norm_err) > max_norm_err: 
         max_norm_err = max(norm_err)
+      # normalised performance for each event and each device mode 
+      indv_norm_perf_count = [ plot_data[mode][_bm][norm_evt] \
+                                        for _bm in benchmarks ]
+      event_counts[evt][mode] = indv_norm_perf_count
+      _subplot[evt_idx].bar( bar_x[mode_idx][:-1], event_counts[evt][mode],
+                             label=march_y_labels[mode][0], color=m_arch_colors[mode], width=0.7, 
+                             yerr=norm_err, capstyle='projecting', capsize=4)
+      _subplot[evt_idx].bar( bar_x[mode_idx][-1],  [_gmean(np.array(indv_norm_perf_count))],
+                             color=m_arch_colors[mode], width=0.7)
 
-      max_norm_err = 0.0
+
+    # Generate final parameters for each subplot
+    _subplot[evt_idx].grid = True  
+    _subplot[evt_idx].axvline(vline_barpos, 0,1, linestyle="--", color='k')
+    _subplot[evt_idx].set_xticks(tick_x)
+    _subplot[evt_idx].set_xticklabels( tick_lbl , rotation=0.0, fontsize="x-large")
+    _subplot[evt_idx].grid = True  
 
 
   
@@ -733,16 +746,9 @@ def plot(json_file, events, separate_files, conf_interval=95):
     assert False, "Separate files not yet implemented"
   else: 
     gen_combined_barchart(result_data, events, conf_interval=conf_interval) 
-
-
   assert len(events) > 0, f"Provide atleast one event to plot graph for" 
-
-  hybrid_measure, hybrid_err = ([], [])
-  hybrid_nc_measure, hybrid_nc_err = ([], [])
-  bmabi_measure, bmabi_err = ([], [])
-  purecap_measure, purecap_err = ([], [])
-
-
+  render(pathlib.Path("hello.pdf"))
+  assert False,f" resume from here --- outfile path" 
 
 
 
@@ -788,6 +794,26 @@ def plot(json_file, events, separate_files, conf_interval=95):
 #  else: 
 #    gen_barchart(result_data, None)
 #    render(outfile)
+
+
+def render(filename, adjust=None):
+  if adjust != None :
+    _left, _right, _bottom, _top, _hspace = adjust
+    plt.subplots_adjust(left=_left,right=_right,bottom=_bottom,top=_top,hspace=_hspace)
+  else:
+    plt.tight_layout()
+
+  _suffix = filename.suffix.lstrip(".")
+  assert _suffix in out_formats, f"invalid output file ({self.out_file}) format {_suffix}. " \
+                                                                f"acceptable formats -> {out_formats}"
+
+  plt.draw()
+  plt.pause(1)
+  input("<Press Enter to continue>")
+  print(f"saving to {filename}")
+  plt.savefig(f"{filename}",format=_suffix)
+  plt.close()
+
 
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(prog = sys.argv[0], 
