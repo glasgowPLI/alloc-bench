@@ -46,8 +46,9 @@ pmc_events = [
  'L1I_CACHE_REFILL', 
  'L1D_CACHE_REFILL', 
  'L2D_CACHE_REFILL', 
- 'LL_CACHE_RD'
-# 'LL_CACHE_MISS_RD',
+ 'LL_CACHE_MISS_RD'
+#### pmcstat can only do up to 10 events at a time
+# 'LL_CACHE_RD',
 # 'BUS_ACCESS', 
 # 'BUS_ACCESS_RD_CTAG' 
 ] 
