@@ -1,0 +1,450 @@
+{
+  "benchmarkabi": {
+    "barnes": {
+      "morello arith": 1084859139,
+      "morello ld/st": 3734437398,
+      "morello regs": 1076651646,
+      "morello misc": 1093389394,
+      "branches": 4501389360,
+      "data proc": 2929158916,
+      "ld/st": 7520105379,
+      "Scalar FP": 3746503630
+    },
+    "binary_tree": {
+      "morello arith": 343405700,
+      "morello ld/st": 854559168,
+      "morello regs": 208749438,
+      "morello misc": 337425825,
+      "branches": 1019596195,
+      "data proc": 598289482,
+      "ld/st": 674342010,
+      "Scalar FP": 537685
+    },
+    "cfrac": {
+      "morello arith": 2956701026,
+      "morello ld/st": 4210531757,
+      "morello regs": 1645731434,
+      "morello misc": 2906203262,
+      "branches": 8949786567,
+      "data proc": 9049194533,
+      "ld/st": 10278921794,
+      "Scalar FP": 6204692
+    },
+    "espresso": {
+      "morello arith": 2228549814,
+      "morello ld/st": 4732585873,
+      "morello regs": 1052012967,
+      "morello misc": 5705896616,
+      "branches": 15587490376,
+      "data proc": 8984614658,
+      "ld/st": 15507186376,
+      "Scalar FP": 26833982
+    },
+    "glibc_simple": {
+      "morello arith": 2054127291,
+      "morello ld/st": 7637363887,
+      "morello regs": 690877349,
+      "morello misc": 4184685986,
+      "branches": 8502435546,
+      "data proc": 11227719949,
+      "ld/st": 9276665911,
+      "Scalar FP": 1520502
+    },
+    "glibc_thread": {
+      "morello arith": 1161873348,
+      "morello ld/st": 1349334452,
+      "morello regs": 350404301,
+      "morello misc": 1580352374,
+      "branches": 3684377635,
+      "data proc": 2231536979,
+      "ld/st": 4111583049,
+      "Scalar FP": 207231051
+    },
+    "mstress": {
+      "morello arith": 723958449,
+      "morello ld/st": 687293399,
+      "morello regs": 311010664,
+      "morello misc": 941273592,
+      "branches": 1391098870,
+      "data proc": 1121673918,
+      "ld/st": 1170878358,
+      "Scalar FP": 1074510
+    },
+    "random_mixed": {
+      "morello arith": 15271834671,
+      "morello ld/st": 16599286830,
+      "morello regs": 811458842,
+      "morello misc": 47338699820,
+      "branches": 65023370337,
+      "data proc": 7438236694,
+      "ld/st": 41098033917,
+      "Scalar FP": 8361653
+    },
+    "richards": {
+      "morello arith": 2226353089,
+      "morello ld/st": 17613393776,
+      "morello regs": 126618686,
+      "morello misc": 1464770883,
+      "branches": 13899395742,
+      "data proc": 6732262038,
+      "ld/st": 9885354957,
+      "Scalar FP": 521530
+    },
+    "small_fixed": {
+      "morello arith": 226088151,
+      "morello ld/st": 594532386,
+      "morello regs": 213370063,
+      "morello misc": 397156767,
+      "branches": 968135821,
+      "data proc": 503691675,
+      "ld/st": 526436849,
+      "Scalar FP": 8956716
+    },
+    "xmalloc": {
+      "morello arith": 1763643845,
+      "morello ld/st": 4732054004,
+      "morello regs": 1030316903,
+      "morello misc": 1170966851,
+      "branches": 5794636992,
+      "data proc": 5872600170,
+      "ld/st": 3814257181,
+      "Scalar FP": 102283201
+    }
+  },
+  "hybrid": {
+    "barnes": {
+      "morello arith": 20294,
+      "morello ld/st": 8273,
+      "morello regs": 109891874,
+      "morello misc": 18927,
+      "branches": 4045320296,
+      "data proc": 3915271928,
+      "ld/st": 12066790858,
+      "Scalar FP": 3746522176
+    },
+    "binary_tree": {
+      "morello arith": 304960,
+      "morello ld/st": 1022901,
+      "morello regs": 116135774,
+      "morello misc": 576197,
+      "branches": 767692999,
+      "data proc": 791407080,
+      "ld/st": 1291349602,
+      "Scalar FP": 545605
+    },
+    "cfrac": {
+      "morello arith": 45746,
+      "morello ld/st": 57796,
+      "morello regs": 220483042,
+      "morello misc": 58804,
+      "branches": 8205458628,
+      "data proc": 13607566251,
+      "ld/st": 16140891904,
+      "Scalar FP": 6212017
+    },
+    "espresso": {
+      "morello arith": 20230,
+      "morello ld/st": 5560293,
+      "morello regs": 217204224,
+      "morello misc": 16456,
+      "branches": 11791262701,
+      "data proc": 11919295996,
+      "ld/st": 19484898467,
+      "Scalar FP": 27904194
+    },
+    "glibc_simple": {
+      "morello arith": 33122,
+      "morello ld/st": 35706,
+      "morello regs": 264058692,
+      "morello misc": 39278,
+      "branches": 6938724076,
+      "data proc": 13993060444,
+      "ld/st": 17990911143,
+      "Scalar FP": 1915500
+    },
+    "glibc_thread": {
+      "morello arith": 48351,
+      "morello ld/st": 67654,
+      "morello regs": 156368657,
+      "morello misc": 64732,
+      "branches": 3413098552,
+      "data proc": 4711151465,
+      "ld/st": 7484629786,
+      "Scalar FP": 244681976
+    },
+    "mstress": {
+      "morello arith": 352701,
+      "morello ld/st": 1200122,
+      "morello regs": 127530162,
+      "morello misc": 658403,
+      "branches": 912637592,
+      "data proc": 1409975461,
+      "ld/st": 1560536906,
+      "Scalar FP": 50115673
+    },
+    "random_mixed": {
+      "morello arith": 28117,
+      "morello ld/st": 22016,
+      "morello regs": 840017569,
+      "morello misc": 31389,
+      "branches": 29576622852,
+      "data proc": 27847753265,
+      "ld/st": 47889633151,
+      "Scalar FP": 7953108
+    },
+    "richards": {
+      "morello arith": 29827,
+      "morello ld/st": 17165,
+      "morello regs": 100363647,
+      "morello misc": 26902,
+      "branches": 13360241703,
+      "data proc": 7263791672,
+      "ld/st": 27607474544,
+      "Scalar FP": 534469
+    },
+    "small_fixed": {
+      "morello arith": 549678,
+      "morello ld/st": 18315642,
+      "morello regs": 125299891,
+      "morello misc": 1014362,
+      "branches": 1139755721,
+      "data proc": 1268424026,
+      "ld/st": 1720052761,
+      "Scalar FP": 15228459
+    },
+    "xmalloc": {
+      "morello arith": 47536,
+      "morello ld/st": 77606,
+      "morello regs": 262882661,
+      "morello misc": 67860,
+      "branches": 5257325399,
+      "data proc": 5660105933,
+      "ld/st": 7938093717,
+      "Scalar FP": 101316850
+    }
+  },
+  "hybrid_nc": {
+    "barnes": {
+      "morello arith": 65719,
+      "morello ld/st": 94647,
+      "morello regs": 108681980,
+      "morello misc": 93527,
+      "branches": 4040590741,
+      "data proc": 3915370475,
+      "ld/st": 12065729097,
+      "Scalar FP": 3746530556
+    },
+    "binary_tree": {
+      "morello arith": 275858,
+      "morello ld/st": 956662,
+      "morello regs": 115312629,
+      "morello misc": 525380,
+      "branches": 731870563,
+      "data proc": 759961162,
+      "ld/st": 1179143360,
+      "Scalar FP": 549705
+    },
+    "cfrac": {
+      "morello arith": 73043,
+      "morello ld/st": 110548,
+      "morello regs": 223327146,
+      "morello misc": 105911,
+      "branches": 8240833182,
+      "data proc": 13644426136,
+      "ld/st": 16157881865,
+      "Scalar FP": 6213845
+    },
+    "espresso": {
+      "morello arith": 63965,
+      "morello ld/st": 5650841,
+      "morello regs": 217838368,
+      "morello misc": 95936,
+      "branches": 11654612207,
+      "data proc": 11819038976,
+      "ld/st": 19257594419,
+      "Scalar FP": 27774627
+    },
+    "glibc_simple": {
+      "morello arith": 71655,
+      "morello ld/st": 119734,
+      "morello regs": 265042733,
+      "morello misc": 114320,
+      "branches": 6776763074,
+      "data proc": 13846219692,
+      "ld/st": 17481901868,
+      "Scalar FP": 1914075
+    },
+    "glibc_thread": {
+      "morello arith": 80672,
+      "morello ld/st": 136722,
+      "morello regs": 158906204,
+      "morello misc": 126695,
+      "branches": 3489419606,
+      "data proc": 4809034289,
+      "ld/st": 7651397748,
+      "Scalar FP": 245006905
+    },
+    "mstress": {
+      "morello arith": 311031,
+      "morello ld/st": 1111764,
+      "morello regs": 125470308,
+      "morello misc": 590407,
+      "branches": 1001292838,
+      "data proc": 1492036990,
+      "ld/st": 1708003300,
+      "Scalar FP": 50223502
+    },
+    "random_mixed": {
+      "morello arith": 67465,
+      "morello ld/st": 100665,
+      "morello regs": 838521336,
+      "morello misc": 101325,
+      "branches": 28606447595,
+      "data proc": 27049425750,
+      "ld/st": 45551833458,
+      "Scalar FP": 7952055
+    },
+    "richards": {
+      "morello arith": 48070,
+      "morello ld/st": 59528,
+      "morello regs": 100177051,
+      "morello misc": 65385,
+      "branches": 13359303567,
+      "data proc": 7263265786,
+      "ld/st": 27606598984,
+      "Scalar FP": 531927
+    },
+    "small_fixed": {
+      "morello arith": 584332,
+      "morello ld/st": 18390002,
+      "morello regs": 126504630,
+      "morello misc": 1077419,
+      "branches": 1133534841,
+      "data proc": 1259304941,
+      "ld/st": 1685253160,
+      "Scalar FP": 15230769
+    },
+    "xmalloc": {
+      "morello arith": 100988,
+      "morello ld/st": 175534,
+      "morello regs": 259154576,
+      "morello misc": 156332,
+      "branches": 5248169319,
+      "data proc": 5671448405,
+      "ld/st": 7957267554,
+      "Scalar FP": 101347928
+    }
+  },
+  "purecap": {
+    "barnes": {
+      "morello arith": 1084879475,
+      "morello ld/st": 3734496158,
+      "morello regs": 1075087399,
+      "morello misc": 1709425568,
+      "branches": 3879266020,
+      "data proc": 2708321888,
+      "ld/st": 7518543727,
+      "Scalar FP": 3746492584
+    },
+    "binary_tree": {
+      "morello arith": 343308570,
+      "morello ld/st": 854286289,
+      "morello regs": 204250611,
+      "morello misc": 487244376,
+      "branches": 851416098,
+      "data proc": 523316348,
+      "ld/st": 669555285,
+      "Scalar FP": 531240
+    },
+    "cfrac": {
+      "morello arith": 2956718375,
+      "morello ld/st": 4210650071,
+      "morello regs": 1642149315,
+      "morello misc": 4297177775,
+      "branches": 7544163697,
+      "data proc": 8396639675,
+      "ld/st": 10275267221,
+      "Scalar FP": 6212227
+    },
+    "espresso": {
+      "morello arith": 2229518984,
+      "morello ld/st": 4733308854,
+      "morello regs": 1051881558,
+      "morello misc": 6330399410,
+      "branches": 14967565993,
+      "data proc": 8664379289,
+      "ld/st": 15507676062,
+      "Scalar FP": 26801515
+    },
+    "glibc_simple": {
+      "morello arith": 2054371619,
+      "morello ld/st": 7637517055,
+      "morello regs": 690719471,
+      "morello misc": 4739326226,
+      "branches": 7946695209,
+      "data proc": 10969139991,
+      "ld/st": 9276532606,
+      "Scalar FP": 1533943
+    },
+    "glibc_thread": {
+      "morello arith": 1208927886,
+      "morello ld/st": 1367222924,
+      "morello regs": 355306860,
+      "morello misc": 1865300676,
+      "branches": 3603078071,
+      "data proc": 2198479716,
+      "ld/st": 4304745289,
+      "Scalar FP": 207891726
+    },
+    "mstress": {
+      "morello arith": 736840630,
+      "morello ld/st": 700722919,
+      "morello regs": 311822142,
+      "morello misc": 1011066180,
+      "branches": 1432555405,
+      "data proc": 1107311598,
+      "ld/st": 1209539490,
+      "Scalar FP": 1067385
+    },
+    "random_mixed": {
+      "morello arith": 15270957040,
+      "morello ld/st": 16594487180,
+      "morello regs": 813284752,
+      "morello misc": 47751507900,
+      "branches": 64618206311,
+      "data proc": 7100007632,
+      "ld/st": 41098410845,
+      "Scalar FP": 8353589
+    },
+    "richards": {
+      "morello arith": 2226386305,
+      "morello ld/st": 17613465380,
+      "morello regs": 126975336,
+      "morello misc": 2781701842,
+      "branches": 12584095022,
+      "data proc": 6073861658,
+      "ld/st": 9885817100,
+      "Scalar FP": 524074
+    },
+    "small_fixed": {
+      "morello arith": 225948788,
+      "morello ld/st": 594116109,
+      "morello regs": 213291090,
+      "morello misc": 520206081,
+      "branches": 844208874,
+      "data proc": 447482760,
+      "ld/st": 525825189,
+      "Scalar FP": 8941920
+    },
+    "xmalloc": {
+      "morello arith": 1728469481,
+      "morello ld/st": 4664743585,
+      "morello regs": 1021471544,
+      "morello misc": 1923559249,
+      "branches": 4818380904,
+      "data proc": 5392430233,
+      "ld/st": 3690293878,
+      "Scalar FP": 101464328
+    }
+  }
+}

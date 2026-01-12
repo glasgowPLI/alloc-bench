@@ -5,10 +5,18 @@ import json
 import pathlib
 import argparse 
 
+import matplotlib
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+import matplotlib.pyplot as plt
+
+out_formats = ["pdf", "png", "svg"]
+
+
+import numpy as np
+
+
 instr_class_map = { 
-  "Scalar FP" : [
-      "Scalar FP"
-    ], 
   "branches"  : [
       "PCrel addr", 
       "Cond Branch (imm)", 
@@ -39,6 +47,9 @@ instr_class_map = {
       "ldst reg (imm)", 
       "Loads & Stores", 
     ], 
+  "Scalar FP" : [
+      "Scalar FP"
+    ], 
   "morello arith" : [
       "morello add/sub cap"
     ], 
@@ -61,6 +72,23 @@ instr_class_map = {
       "System Reg",
     ]
 } 
+
+
+
+instr_colours = { 
+    'data proc'     : 'dimgray', 
+    'Scalar FP'     : 'salmon', 
+    'branches'      : 'turquoise', 
+    'ld/st'         : 'sandybrown', 
+    'morello arith' : 'lightseagreen', 
+    'morello ld/st' : 'cadetblue', 
+    'morello misc'  : 'skyblue', 
+    'morello regs'  : 'dodgerblue'
+    #'spare unused 1' : 'silver', 
+    #'spare unused 2' : 'whitesmoke', 
+}
+
+dev_modes = ["hybrid", "hybrid_nc", "purecap", "benchmarkabi"]
 
 
 # Open data log file, extract records and remove headers 
@@ -170,12 +198,96 @@ def convert_data(repo):
 
 
 
+# Generate list of locations for start of bars and tick-locations
+def gen_bunched_bar_loc(obj_json, bw=0.5, sw=0.5, offset=0.5, strip_zero=False):
+  tick_pos, bar_pos = ([], [ [] for _bm in obj_json.keys()])
+  bin_start = offset
+  num_bins = len(obj_json.keys())
+  tick_labels = list(obj_json["hybrid" if "hybrid" in obj_json else "purecap"].keys())
+  #print(f" benchmarks for generation - {tick_labels}") 
+  #print(f" num_bins =  {num_bins}") 
+  #print(f" offset =  {offset}, bw = {bw}, sw= {sw}") 
+  #print("==========+")
+
+  bin_start = offset
+  for idx_i in range(len(tick_labels)):
+    data_end = bin_start + (num_bins*bw)
+    benchmark_end = bin_start + (num_bins*bw) + sw
+    for _bin in range(num_bins): 
+      bar_pos[_bin].append(bin_start + (_bin * bw) + bw/2)
+    tick_pos.append((data_end + bin_start)/2) 
+    bin_start = benchmark_end 
+
+  return (tick_labels, tick_pos, bar_pos)
+
+
+def normalise_to_hybrid(data, hybrid_total, mode, instr_type, benchmarks): 
+  return [ float(data[mode][bm][instr_type]) * 100 / hybrid_total[bm] for bm in benchmarks ] 
+
+  
 
 # Plot data to pdf
-def plot_data(repo, json_file): 
-  print(f"json file name {json_file}") 
-  pass
+def plot_data(repo, data): 
+  _fig, _subplot = plt.subplots(nrows=1, ncols=1, sharex=False)
+  _fig.tight_layout()
 
+
+  tick_lbl, tick_x, bar_x = gen_bunched_bar_loc(data, bw=0.5, sw=0.5, offset=0.5, strip_zero=False)
+  #print(f"labels = {tick_lbl}\npos_tick = {tick_x}\npos_bar = {bar_x}")
+
+  benchmarks = list(data['purecap'].keys())
+  instr_types = list(instr_class_map.keys()) 
+
+  if repo.relative: 
+    hybrid_total = { _bm : float(sum(data["hybrid"][_bm].values())) 
+                       for _bm in benchmarks }
+
+  for mode_idx, mode in enumerate(dev_modes):
+    bottom = np.array([0] * len(benchmarks), dtype='f') 
+
+    for instr_idx, _instr in enumerate(instr_types):
+      perf_count = normalise_to_hybrid(data, hybrid_total, mode, _instr, benchmarks) \
+                       if repo.relative else [ float(data[mode][_bm][_instr]) for _bm in benchmarks ] 
+      _subplot.bar( bar_x[mode_idx], perf_count,
+                    color = instr_colours[_instr], width=0.5, edgecolor='black', 
+                    label = _instr if mode == 'purecap' else None
+                    , bottom = bottom, hatch = '...' if _instr.startswith('morello') else '' )
+      bottom += perf_count  # Stack the instruction metrics on top of the other
+
+
+  # Generate final parameters for each subplot
+  _subplot.grid = True 
+  _subplot.set_xticks(tick_x)
+  _subplot.set_xticklabels( tick_lbl , rotation=15.0, fontsize="medium")
+  _subplot.legend(loc='upper left', ncol=4, fontsize='x-large')
+  if repo.relative:
+    _subplot.set_ylabel("Normalised (vs hybrid)", fontsize="medium")
+  else:
+    ax.set_ylabel('num instructions')
+
+
+
+
+def render(filename, adjust=None):
+  if adjust != None :
+    _left, _right, _bottom, _top, _hspace = adjust
+    plt.subplots_adjust(left=_left,right=_right,bottom=_bottom,top=_top,hspace=_hspace)
+  else:
+    plt.tight_layout()
+
+  _suffix = filename.suffix.lstrip(".")
+  assert _suffix in out_formats, f"invalid output file ({self.out_file}) format {_suffix}. " \
+                                                                          f"acceptable formats -> {out_formats}"
+
+  plt.draw()
+  plt.pause(1)
+  input("<Press Enter to continue>")
+  print(f"saving to {filename}")
+  plt.savefig(f"{filename}",format=_suffix)
+  plt.close()
+
+
+## Command line option processing
 class CommandLine: 
   def __init__(self, name=None, desc=None, epilogue=None):
     self.parser = (name, desc, epilogue) 
@@ -186,6 +298,7 @@ class CommandLine:
     self.infile_list = self.args.input
     self.outfile = self.args.output
     self.baseline = self.args.baseline
+    self.relative = self.args.relative
 
 
   @property
@@ -253,6 +366,8 @@ class CommandLine:
                              help=f"baseline log file. Should be QEMU log file with only boot sequence captured") 
     self.parser.add_argument('-v', '--verbose', action='store_true',
                              default=False, help=f"print parsed cmdline options")
+    self.parser.add_argument('-r', '--relative', action='store_true',
+                             default=False, help=f"Normalise all values to hybrid")
     self.parser.add_argument('-a', '--action', nargs='*',
                              choices = ['convert', 'plot'],
                              default = ['convert'],
@@ -264,6 +379,7 @@ class CommandLine:
 def verbose(repo):
   print(f"--input                   : {repo.infile_list}")
   print(f"--output                  : {repo.outfile}")
+  print(f"--relative                : {repo.relative}")
   print(f"--baseline                : {repo.baseline}")
   print(f"--workdir                 : {repo.workdir}")
   print(f"--action                  : {repo.args.action}")
@@ -285,4 +401,8 @@ if __name__ == '__main__':
 
   if 'plot' in repo.args.action: 
     json_file =  repo.outfile if 'convert' in repo.args.action else repo.infile_list[0]
-    plot_data(repo, json_file) 
+    outfile = repo.outfile.parent / f"{repo.outfile.stem}.pdf" if 'convert' in repo.args.action else repo.outfile
+    with open(json_file) as fd: 
+      json_data = json.load(fd) 
+      plot_data(repo, json_data) 
+      render(outfile)
